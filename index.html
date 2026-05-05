@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>IWUF Sanda - Examen Arbitres</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#0A0A0F;color:#E8E8F0;min-height:100vh}
+.screen{display:none;padding:40px}
+.screen.active{display:block}
+.btn{background:#C8102E;color:#fff;border:none;padding:12px 30px;cursor:pointer;border-radius:5px;font-size:16px}
+.btn:hover{opacity:0.9}
+.btn-blue{background:#005ab5}
+.card{background:#1C1C28;border-radius:10px;padding:30px;max-width:500px;margin:auto;border:1px solid #2A2A3A}
+input{width:100%;padding:12px;margin:10px 0;border-radius:5px;border:1px solid #2A2A3A;background:#2A2A3A;color:#fff;font-size:14px}
+h1{color:#D4AF37;margin-bottom:20px;text-align:center}
+.success{background:#064e3b;color:#22c55e;padding:10px;border-radius:5px;margin-bottom:15px}
+.info{background:#1e3a5f;color:#93c5fd;padding:10px;border-radius:5px;margin-bottom:15px}
+.error{background:#7f1d1d;color:#ef4444;padding:10px;border-radius:5px;margin-bottom:15px}
+</style>
+</head>
+<body>
+
+<!-- Écran d'accueil -->
+<div id="screen-landing" class="screen active">
+    <div class="card" style="text-align:center;max-width:600px">
+        <h1>🥋 IWUF SANDA</h1>
+        <h2 style="color:#D4AF37">Examen des Arbitres</h2>
+        <p style="margin:20px 0">Certification B/A · Règlement 2024</p>
+        <div style="display:flex;gap:15px;justify-content:center">
+            <button class="btn" onclick="showCandidate()">▶ Commencer</button>
+            <button class="btn btn-blue" onclick="showAdminLogin()">⚙ Admin</button>
+        </div>
+        <div style="margin-top:30px;display:flex;gap:20px;justify-content:center">
+            <div><span id="stats-q" style="font-size:28px;color:#D4AF37">10</span><br>Questions</div>
+            <div><span id="stats-d" style="font-size:28px;color:#D4AF37">60</span><br>Minutes</div>
+            <div><span id="stats-p" style="font-size:28px;color:#D4AF37">60</span><br>Seuil %</div>
+        </div>
+    </div>
+</div>
+
+<!-- Écran connexion candidat -->
+<div id="screen-candidate" class="screen">
+    <div class="card">
+        <h1>🔑 Accès Candidat</h1>
+        <div id="prefill-notice" class="success" style="display:none">✅ Code pré-rempli depuis le lien !</div>
+        <div class="info">📌 Entrez votre code de session</div>
+        <input type="text" id="session-code" placeholder="SESSION-XXXXXX" style="text-align:center;font-weight:bold">
+        <input type="text" id="candidate-name" placeholder="Votre nom complet">
+        <div id="login-error" class="error" style="display:none"></div>
+        <button class="btn" style="width:100%;margin-top:10px" onclick="startExam()">Commencer l'examen ▶</button>
+        <button class="btn btn-blue" style="width:100%;margin-top:10px" onclick="showLanding()">← Retour</button>
+    </div>
+</div>
+
+<!-- Écran admin login -->
+<div id="screen-admin-login" class="screen">
+    <div class="card" style="text-align:center">
+        <h1>⚙ Administration</h1>
+        <input type="text" id="admin-user" placeholder="Identifiant" value="admin">
+        <input type="password" id="admin-pass" placeholder="Mot de passe">
+        <div id="admin-error" class="error" style="display:none">Identifiants incorrects</div>
+        <button class="btn" style="width:100%" onclick="doAdminLogin()">Connexion</button>
+        <button class="btn btn-blue" style="width:100%;margin-top:10px" onclick="showLanding()">← Retour</button>
+        <p style="margin-top:15px;font-size:12px;color:#888">Démo: admin / sanda2024</p>
+    </div>
+</div>
+
+<!-- Écran admin panel -->
+<div id="screen-admin" class="screen">
+    <div class="card">
+        <h1>📊 Tableau de bord</h1>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:20px 0">
+            <div style="background:#2A2A3A;padding:20px;border-radius:8px;text-align:center">
+                <div style="font-size:32px;color:#D4AF37" id="admin-q">0</div>
+                <div>Questions</div>
+            </div>
+            <div style="background:#2A2A3A;padding:20px;border-radius:8px;text-align:center">
+                <div style="font-size:32px;color:#D4AF37" id="admin-s">0</div>
+                <div>Sessions</div>
+            </div>
+        </div>
+        <button class="btn btn-blue" style="width:100%" onclick="showLanding()">← Accueil</button>
+    </div>
+</div>
+
+<!-- Écran examen -->
+<div id="screen-exam" class="screen">
+    <div class="card" style="max-width:700px">
+        <h1>📝 Examen en cours</h1>
+        <div style="background:#2A2A3A;padding:15px;border-radius:8px;margin:15px 0">
+            <p><strong>Candidat:</strong> <span id="exam-name"></span></p>
+            <p><strong>Session:</strong> <span id="exam-session"></span></p>
+            <p><strong>Temps restant:</strong> <span id="exam-timer">00:00</span></p>
+        </div>
+        <div id="question-area">
+            <p style="color:#888">Chargement des questions...</p>
+        </div>
+        <button class="btn" style="width:100%;margin-top:15px" onclick="submitExam()">✓ Terminer l'examen</button>
+    </div>
+</div>
+
+<!-- Écran résultats -->
+<div id="screen-results" class="screen">
+    <div class="card" style="text-align:center">
+        <h1 id="result-title">🏆 Résultats</h1>
+        <div style="margin:20px 0">
+            <div style="font-size:48px;font-weight:bold" id="result-score">0%</div>
+            <div id="result-msg" style="margin-top:10px"></div>
+        </div>
+        <button class="btn" onclick="showLanding()">Accueil</button>
+        <button class="btn btn-blue" style="margin-top:10px" onclick="showCandidate()">Nouvel examen</button>
+    </div>
+</div>
+
+<script>
+// ============ DONNÉES ============
+let questionBank = [];
+let activeSessions = {};
+let allResults = [];
+let currentExam = null;
+let timerInterval = null;
+
+const examConfig = {
+    duration: 60,
+    nQuestions: 10,
+    passThreshold: 60,
+    adminPass: 'sanda2024'
+};
+
+// ============ FONCTIONS ÉCRANS ============
+function showLanding() {
+    showScreen('landing');
+}
+
+function showCandidate() {
+    showScreen('candidate');
+}
+
+function showAdminLogin() {
+    showScreen('admin-login');
+}
+
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(`screen-${screenId}`).classList.add('active');
+}
+
+// ============ ADMIN ============
+function doAdminLogin() {
+    const user = document.getElementById('admin-user').value;
+    const pass = document.getElementById('admin-pass').value;
+    const error = document.getElementById('admin-error');
+    
+    if (user === 'admin' && pass === examConfig.adminPass) {
+        updateAdminDashboard();
+        showScreen('admin');
+        error.style.display = 'none';
+    } else {
+        error.style.display = 'block';
+        setTimeout(() => error.style.display = 'none', 3000);
+    }
+}
+
+function updateAdminDashboard() {
+    document.getElementById('admin-q').textContent = questionBank.length;
+    document.getElementById('admin-s').textContent = Object.keys(activeSessions).length;
+}
+
+// ============ CODE SESSION DEPUIS URL ============
+function getSessionCodeFromUrl() {
+    const url = new URL(window.location.href);
+    return url.searchParams.get('session');
+}
+
+// ============ EXAMEN ============
+function startExam() {
+    const code = document.getElementById('session-code').value.trim().toUpperCase();
+    const name = document.getElementById('candidate-name').value.trim();
+    const errorDiv = document.getElementById('login-error');
+    
+    errorDiv.style.display = 'none';
+    
+    if (!code) {
+        errorDiv.textContent = '❌ Entrez le code de session';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    if (!name) {
+        errorDiv.textContent = '❌ Entrez votre nom complet';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    // Créer une session temporaire si elle n'existe pas
+    if (!activeSessions[code] && questionBank.length > 0) {
+        const questions = [...questionBank].slice(0, examConfig.nQuestions);
+        activeSessions[code] = {
+            code: code,
+            questions: questions,
+            questionsCount: questions.length,
+            duration: examConfig.duration,
+            passScore: examConfig.passThreshold,
+            active: true
+        };
+        saveData();
+    }
+    
+    const session = activeSessions[code];
+    
+    if (!session) {
+        errorDiv.textContent = '❌ Session introuvable. Contactez l\'administrateur.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    if (!session.active) {
+        errorDiv.textContent = '❌ Cette session est terminée.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    // Démarrer l'examen
+    currentExam = {
+        sessionCode: code,
+        candidateName: name,
+        questions: session.questions,
+        answers: new Array(session.questions.length).fill(null),
+        currentIndex: 0,
+        startTime: Date.now(),
+        secondsLeft: session.duration * 60,
+        totalPoints: session.questions.reduce((s, q) => s + (q.points || 1), 0),
+        passThreshold: session.passScore
+    };
+    
+    document.getElementById('exam-name').textContent = name;
+    document.getElementById('exam-session').textContent = code;
+    
+    showScreen('exam');
+    startTimer();
+    renderCurrentQuestion();
+}
+
+function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+        if (!currentExam) return;
+        currentExam.secondsLeft--;
+        updateTimerDisplay();
+        if (currentExam.secondsLeft <= 0) {
+            clearInterval(timerInterval);
+            submitExam();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    if (!currentExam) return;
+    const minutes = Math.floor(currentExam.secondsLeft / 60);
+    const seconds = currentExam.secondsLeft % 60;
+    document.getElementById('exam-timer').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    if (currentExam.secondsLeft < 60) {
+        document.getElementById('exam-timer').style.color = '#ef4444';
+    }
+}
+
+function renderCurrentQuestion() {
+    if (!currentExam) return;
+    const q = currentExam.questions[currentExam.currentIndex];
+    const currentAnswer = currentExam.answers[currentExam.currentIndex];
+    const isMultiple = q.type === 'mc';
+    
+    let html = `
+        <div style="margin-bottom:20px">
+            <span style="background:#005ab5;padding:5px 12px;border-radius:20px;font-size:12px">Question ${currentExam.currentIndex + 1}/${currentExam.questions.length}</span>
+            <span style="background:#D4AF37;color:#0A0A0F;padding:5px 12px;border-radius:20px;font-size:12px;margin-left:10px">${q.points || 1} pt(s)</span>
+        </div>
+        <p style="font-size:18px;margin-bottom:20px">${q.text}</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+    `;
+    
+    q.options.forEach((opt, idx) => {
+        const isChecked = isMultiple ? 
+            (Array.isArray(currentAnswer) && currentAnswer.includes(idx)) : 
+            (currentAnswer === idx);
+        const inputType = isMultiple ? 'checkbox' : 'radio';
+        html += `
+            <label style="display:flex;align-items:center;gap:12px;padding:12px;background:#2A2A3A;border-radius:8px;cursor:pointer">
+                <input type="${inputType}" name="question" value="${idx}" ${isChecked ? 'checked' : ''} onchange="selectAnswer(${idx})">
+                <span>${String.fromCharCode(65 + idx)}. ${opt}</span>
+            </label>
+        `;
+    });
+    
+    html += `
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+            <button class="btn btn-blue" onclick="prevQuestion()" ${currentExam.currentIndex === 0 ? 'disabled' : ''}>◀ Précédent</button>
+            <button class="btn" onclick="nextQuestion()" style="margin-left:auto">Suivant ▶</button>
+        </div>
+    `;
+    
+    document.getElementById('question-area').innerHTML = html;
+}
+
+function selectAnswer(value) {
+    if (!currentExam) return;
+    const q = currentExam.questions[currentExam.currentIndex];
+    const currentAnswer = currentExam.answers[currentExam.currentIndex];
+    
+    if (q.type === 'mc') {
+        let answers = Array.isArray(currentAnswer) ? [...currentAnswer] : [];
+        const idx = answers.indexOf(value);
+        if (idx === -1) {
+            answers.push(value);
+        } else {
+            answers.splice(idx, 1);
+        }
+        currentExam.answers[currentExam.currentIndex] = answers.length ? answers : null;
+    } else {
+        currentExam.answers[currentExam.currentIndex] = value;
+    }
+}
+
+function prevQuestion() {
+    if (currentExam && currentExam.currentIndex > 0) {
+        currentExam.currentIndex--;
+        renderCurrentQuestion();
+    }
+}
+
+function nextQuestion() {
+    if (currentExam && currentExam.currentIndex < currentExam.questions.length - 1) {
+        currentExam.currentIndex++;
+        renderCurrentQuestion();
+    }
+}
+
+function submitExam() {
+    if (timerInterval) clearInterval(timerInterval);
+    
+    if (!currentExam) return;
+    
+    let totalPoints = 0;
+    let correctCount = 0;
+    
+    currentExam.questions.forEach((q, i) => {
+        const answer = currentExam.answers[i];
+        if (answer === null) return;
+        
+        const qPoints = q.points || 1;
+        let isCorrect = false;
+        
+        if (Array.isArray(q.answer)) {
+            const userAnswers = Array.isArray(answer) ? answer.sort().join(',') : [answer].sort().join(',');
+            const correctAnswers = q.answer.sort().join(',');
+            if (userAnswers === correctAnswers) {
+                isCorrect = true;
+            }
+        } else {
+            if (answer === q.answer) {
+                isCorrect = true;
+            }
+        }
+        
+        if (isCorrect) {
+            totalPoints += qPoints;
+            correctCount++;
+        }
+    });
+    
+    const maxPoints = currentExam.totalPoints;
+    const percentage = Math.round((totalPoints / maxPoints) * 100);
+    const passed = percentage >= currentExam.passThreshold;
+    const duration = Math.floor((Date.now() - currentExam.startTime) / 1000);
+    
+    const result = {
+        id: Date.now(),
+        sessionCode: currentExam.sessionCode,
+        candidateName: currentExam.candidateName,
+        percentage: percentage,
+        passed: passed,
+        totalQuestions: currentExam.questions.length,
+        answeredCount: currentExam.answers.filter(a => a !== null).length,
+        earnedPoints: totalPoints,
+        totalPoints: maxPoints,
+        durationSec: duration,
+        dateTime: new Date().toLocaleString('fr-FR')
+    };
+    
+    allResults.push(result);
+    
+    if (activeSessions[currentExam.sessionCode]?.candidates) {
+        activeSessions[currentExam.sessionCode].candidates[currentExam.candidateName] = result;
+    }
+    
+    saveData();
+    
+    // Afficher les résultats
+    document.getElementById('result-title').textContent = passed ? '🏆 FÉLICITATIONS !' : '📋 EXAMEN TERMINÉ';
+    document.getElementById('result-score').textContent = `${percentage}%`;
+    document.getElementById('result-score').style.color = passed ? '#22c55e' : '#ef4444';
+    document.getElementById('result-msg').innerHTML = passed ? 
+        `Vous avez obtenu ${percentage}%<br>Seuil requis: ${currentExam.passThreshold}%<br>Félicitations !` :
+        `Vous avez obtenu ${percentage}%<br>Seuil requis: ${currentExam.passThreshold}%<br>Non atteint. Réessayez.`;
+    
+    showScreen('results');
+    currentExam = null;
+}
+
+// ============ DONNÉES PAR DÉFAUT ============
+function loadDefaultQuestions() {
+    questionBank = [
+        {id:1, type:'sc', text:'Combien de rounds dispute-t-on en compétition Sanda adulte?', points:1, options:['1 round','2 rounds','3 rounds','4 rounds'], answer:2},
+        {id:2, type:'sc', text:'Combien de points rapporte un coup de pied à la tête validé?', points:1, options:['1 point','2 points','3 points','0 point'], answer:1},
+        {id:3, type:'sc', text:'Quelle est la durée d\'un round en compétition Sanda adulte?', points:1, options:['1 min 30','2 minutes','3 minutes','5 minutes'], answer:1},
+        {id:4, type:'tf', text:'Les coudes sont autorisés en Sanda compétition.', points:1, options:['Vrai','Faux'], answer:1},
+        {id:5, type:'sc', text:'Quelle est la surface standard du leitai (plateforme)?', points:1, options:['6×6 m','8×8 m','10×10 m','12×12 m'], answer:1},
+        {id:6, type:'tf', text:'Le protège-dents est obligatoire en compétition Sanda.', points:1, options:['Vrai','Faux'], answer:0},
+        {id:7, type:'sc', text:'Une projection valide (adversaire chute, attaquant debout) rapporte combien de points?', points:1, options:['1 point','2 points','3 points','4 points'], answer:1},
+        {id:8, type:'sc', text:'Combien de fautes personnelles entraînent la disqualification?', points:1, options:['2','3','4','5'], answer:1},
+        {id:9, type:'tf', text:'Un coup de pied à la tête rapporte 3 points.', points:1, options:['Vrai','Faux'], answer:0},
+        {id:10, type:'sc', text:'Qui donne le signal de début et de fin de round?', points:1, options:['Le juge principal','L\'arbitre de plateforme','Le chronométreur','Le speaker'], answer:1}
+    ];
+}
+
+function saveData() {
+    localStorage.setItem('sanda_qbank', JSON.stringify(questionBank));
+    localStorage.setItem('sanda_sessions', JSON.stringify(activeSessions));
+    localStorage.setItem('sanda_results', JSON.stringify(allResults));
+}
+
+function loadData() {
+    try {
+        const q = localStorage.getItem('sanda_qbank');
+        if (q) questionBank = JSON.parse(q);
+        const s = localStorage.getItem('sanda_sessions');
+        if (s) activeSessions = JSON.parse(s);
+        const r = localStorage.getItem('sanda_results');
+        if (r) allResults = JSON.parse(r);
+    } catch(e) {}
+}
+
+// ============ INITIALISATION ============
+window.addEventListener('DOMContentLoaded', () => {
+    loadData();
+    
+    if (questionBank.length === 0) {
+        loadDefaultQuestions();
+        saveData();
+    }
+    
+    document.getElementById('stats-q').textContent = questionBank.length;
+    document.getElementById('stats-d').textContent = examConfig.duration;
+    document.getElementById('stats-p').textContent = examConfig.passThreshold;
+    
+    // Auto-remplir le code session depuis l'URL
+    const sessionCode = getSessionCodeFromUrl();
+    if (sessionCode) {
+        const sessionInput = document.getElementById('session-code');
+        const prefillNotice = document.getElementById('prefill-notice');
+        if (sessionInput) {
+            sessionInput.value = sessionCode;
+            prefillNotice.style.display = 'block';
+        }
+    }
+    
+    // Créer une session par défaut si aucune n'existe
+    if (Object.keys(activeSessions).length === 0 && questionBank.length > 0) {
+        const defaultCode = 'SESSION-TEST123';
+        activeSessions[defaultCode] = {
+            code: defaultCode,
+            questions: [...questionBank].slice(0, examConfig.nQuestions),
+            questionsCount: examConfig.nQuestions,
+            duration: examConfig.duration,
+            passScore: examConfig.passThreshold,
+            active: true,
+            candidates: {}
+        };
+        saveData();
+    }
+});
+</script>
+</body>
+</html>
